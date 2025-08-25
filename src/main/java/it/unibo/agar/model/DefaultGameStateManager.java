@@ -4,11 +4,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class DefaultGameStateManager implements GameStateManager {
-    private static final double PLAYER_SPEED = 2.0;
+    protected static final double PLAYER_SPEED = 2.0;
     private static final int MAX_FOOD_ITEMS = 150;
     private static final Random random = new Random();
-    private World world;
-    private final Map<String, Position> playerDirections;
+    protected World world;
+    protected final Map<String, Position> playerDirections;
 
 
     public DefaultGameStateManager(final World initialWorld) {
@@ -48,7 +48,7 @@ public class DefaultGameStateManager implements GameStateManager {
         return new World(currentWorld.getWidth(), currentWorld.getHeight(), updatedPlayers, currentWorld.getFoods());
     }
 
-    private World handleEating(final World currentWorld) {
+    public World handleEating(final World currentWorld) {
         final List<Player> updatedPlayers = currentWorld.getPlayers().stream()
                 .map(player -> growPlayer(currentWorld, player))
                 .toList();
@@ -98,4 +98,7 @@ public class DefaultGameStateManager implements GameStateManager {
                 playerDirections.putIfAbsent(p.getId(), Position.ZERO));
     }
 
+    public void updateWorld(World world) {
+        this.world = world;
+    }
 }

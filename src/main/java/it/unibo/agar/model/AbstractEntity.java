@@ -1,7 +1,9 @@
 package it.unibo.agar.model;
 
 
-public abstract class AbstractEntity implements Entity {
+import java.io.Serializable;
+
+public abstract class AbstractEntity implements Entity, Serializable {
     private final String id;
     private final double x;
     private final double y;
