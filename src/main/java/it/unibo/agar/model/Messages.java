@@ -2,5 +2,5 @@ package it.unibo.agar.model;
 
 public class Messages {
 
-    public record RegistrationACK(String playerId, World world) {};
+    public record RegistrationACK(String playerId, World world) implements java.io.Serializable {};
 }

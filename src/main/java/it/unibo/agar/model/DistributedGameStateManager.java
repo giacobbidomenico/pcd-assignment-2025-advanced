@@ -26,14 +26,12 @@ public class DistributedGameStateManager implements GameStateManager {
     public DistributedGameStateManager(final Channel channel) throws IOException {
         this.channel = channel;
 
-        // Inizializza il gestore di stato locale
         List<Food> initialFoods = GameInitializer.initialFoods(INITIAL_FOOD_COUNT, WORLD_WIDTH, WORLD_HEIGHT);
         World initialWorld = new World(WORLD_WIDTH, WORLD_HEIGHT, List.of(), initialFoods);
         this.localGameStateManager = new ServerGameStateManager(initialWorld);
 
         setupRabbitMQ();
 
-        // Avvia il consumer per i comandi dei giocatori
         startCommandConsumer();
 
         System.out.println("Distributed Game State Manager pronto.");
@@ -47,25 +45,30 @@ public class DistributedGameStateManager implements GameStateManager {
 
     private void startCommandConsumer() throws IOException {
         DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-            String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
-            System.out.println("Ricevuto comando: " + message);
+            // L'intero blocco di elaborazione dei messaggi è stato racchiuso in un try-catch
+            try {
+                String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
+                System.out.println("Ricevuto comando: " + message);
 
-            if (message.startsWith("REGISTER")) {
-                registerPlayer();
-            } else if (message.startsWith("MOVE")) {
-                String[] parts = message.substring(5).split(",");
-                if (parts.length == 5) {
-                    localGameStateManager.movePlayer(parts[0], Double.parseDouble(parts[1]),
-                            Double.parseDouble(parts[2]));
-                    setPlayerDirection(parts[0], Double.parseDouble(parts[3]), Double.parseDouble(parts[4]));
+                if (message.startsWith("REGISTER")) {
+                    registerPlayer();
+                } else if (message.startsWith("MOVE")) {
+                    String[] parts = message.substring(5).split(",");
+                    if (parts.length == 5) {
+                        localGameStateManager.movePlayer(parts[0], Double.parseDouble(parts[1]),
+                                Double.parseDouble(parts[2]));
+                        setPlayerDirection(parts[0], Double.parseDouble(parts[3]), Double.parseDouble(parts[4]));
+                    }
+                } else if (message.startsWith("UNREGISTER")) {
+                    String playerId = message.substring(11);
+                    unregisterPlayer(playerId);
                 }
-            } else if (message.startsWith("UNREGISTER")) {
-                String playerId = message.substring(11);
-                unregisterPlayer(playerId);
+            } catch (Exception e) {
+                // Gestisce qualsiasi eccezione in modo da non chiudere il canale RabbitMQ
+                System.err.println("Errore durante l'elaborazione del comando: " + e.getMessage());
+                e.printStackTrace();
             }
         };
-
-        // Registra il consumer
         channel.basicConsume(CMD_QUEUE_NAME, true, deliverCallback, consumerTag -> {});
     }
 
@@ -79,12 +82,11 @@ public class DistributedGameStateManager implements GameStateManager {
         localGameStateManager.updateWorld(new World(currentWorld.getWidth(), currentWorld.getHeight(), updatedPlayers, currentWorld.getFoods()));
 
         System.out.println("Nuovo giocatore registrato: " + playerId);
-        // Notifica il client del suo ID
         channel.basicPublish(
                 "",
                 REG_QUEUE_NAME,
                 null,
-                Serializer.serialize(new Messages.RegistrationACK(playerId,localGameStateManager.getWorld()))
+                Serializer.serialize(new Messages.RegistrationACK(playerId, localGameStateManager.getWorld()))
         );
     }
 
@@ -117,5 +119,4 @@ public class DistributedGameStateManager implements GameStateManager {
             System.err.println("Errore nella trasmissione dello stato del gioco: " + e.getMessage());
         }
     }
-
 }

@@ -5,12 +5,12 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import it.unibo.agar.model.DistributedGameStateManager;
 import it.unibo.agar.view.GlobalView;
-import it.unibo.agar.view.LocalView;
 
 import javax.swing.*;
 import java.io.IOException;
-import java.util.*;
+import java.util.Optional;
 import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.TimeoutException;
 
 public class Server {
@@ -19,15 +19,23 @@ public class Server {
     private static Optional<GlobalView> globalView = Optional.empty();
 
     public static void main(String[] args) throws IOException, TimeoutException {
-        try{
+        try {
             ConnectionFactory factory = new ConnectionFactory();
             factory.setHost(RABBIT_MQ_HOST);
-            Channel channel;
             Connection connection = factory.newConnection();
-            channel = connection.createChannel();
+            Channel channel = connection.createChannel();
 
+            // Dichiarazione delle code e degli exchange per garantire che l'infrastruttura sia pronta
+            final String CMD_QUEUE_NAME = "game_commands";
+            final String REG_QUEUE_NAME = "player_registration";
+            final String STATE_EXCHANGE_NAME = "game_state";
+            channel.queueDeclare(CMD_QUEUE_NAME, false, false, false, null);
+            channel.queueDeclare(REG_QUEUE_NAME, false, false, false, null);
+            channel.exchangeDeclare(STATE_EXCHANGE_NAME, "fanout");
 
+            // Il DistributedGameStateManager gestisce la logica di gioco e i comandi in entrata.
             DistributedGameStateManager distributedManager = new DistributedGameStateManager(channel);
+
             SwingUtilities.invokeLater(() -> {
                 globalView = Optional.of(new GlobalView(distributedManager));
                 globalView.ifPresent(x -> x.setVisible(true));
@@ -39,18 +47,14 @@ public class Server {
                 @Override
                 public void run() {
                     distributedManager.tick();
-
                     SwingUtilities.invokeLater(() -> globalView.ifPresent(GlobalView::repaintView));
                 }
             }, 0, GAME_TICK_RATE_MS);
 
-            // Il programma continua a funzionare perché il thread del consumer e il thread del timer sono attivi.
             System.out.println("Game server avviato. Premi CTRL-C per uscire.");
         } catch (Exception e) {
-            e.printStackTrace(); // This is the crucial line you need to add
-            System.err.println("The program terminated due to an unhandled exception: " + e.getMessage());
+            e.printStackTrace();
+            System.err.println("Il programma è terminato a causa di un'eccezione non gestita: " + e.getMessage());
         }
     }
-
-
 }
