@@ -15,7 +15,7 @@ import java.util.concurrent.TimeoutException;
 
 public class Server {
     private static final String RABBIT_MQ_HOST = "localhost";
-    private static final int GAME_TICK_RATE_MS = 50;
+    private static final int GAME_TICK_RATE_MS = 30;
     private static Optional<GlobalView> globalView = Optional.empty();
 
     public static void main(String[] args) throws IOException, TimeoutException {
@@ -25,16 +25,8 @@ public class Server {
             Connection connection = factory.newConnection();
             Channel channel = connection.createChannel();
 
-            // Dichiarazione delle code e degli exchange per garantire che l'infrastruttura sia pronta
-            final String CMD_QUEUE_NAME = "game_commands";
-            final String REG_QUEUE_NAME = "player_registration";
-            final String STATE_EXCHANGE_NAME = "game_state";
-            channel.queueDeclare(CMD_QUEUE_NAME, false, false, false, null);
-            channel.queueDeclare(REG_QUEUE_NAME, false, false, false, null);
-            channel.exchangeDeclare(STATE_EXCHANGE_NAME, "fanout");
-
             // Il DistributedGameStateManager gestisce la logica di gioco e i comandi in entrata.
-            DistributedGameStateManager distributedManager = new DistributedGameStateManager(channel);
+            DistributedGameStateManager distributedManager = new DistributedGameStateManager(connection);
 
             SwingUtilities.invokeLater(() -> {
                 globalView = Optional.of(new GlobalView(distributedManager));

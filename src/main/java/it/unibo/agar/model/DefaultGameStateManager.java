@@ -18,12 +18,12 @@ public class DefaultGameStateManager implements GameStateManager {
     }
 
     @Override
-    public World getWorld() {
+    public synchronized World getWorld() {
         return this.world;
     }
 
     @Override
-    public void setPlayerDirection(final String playerId, final double dx, final double dy) {
+    public synchronized void setPlayerDirection(final String playerId, final double dx, final double dy) {
         // Ensure player exists before setting direction
         if (world.getPlayerById(playerId).isPresent()) {
             this.playerDirections.put(playerId, Position.of(dx, dy));
@@ -88,7 +88,7 @@ public class DefaultGameStateManager implements GameStateManager {
                 .toList();
     }
 
-    private void cleanupPlayerDirections() {
+    private synchronized void cleanupPlayerDirections() {
         List<String> currentPlayerIds = this.world.getPlayers().stream()
                 .map(Player::getId)
                 .collect(Collectors.toList());
@@ -98,7 +98,7 @@ public class DefaultGameStateManager implements GameStateManager {
                 playerDirections.putIfAbsent(p.getId(), Position.ZERO));
     }
 
-    public void updateWorld(World world) {
+    public synchronized void updateWorld(World world) {
         this.world = world;
     }
 }

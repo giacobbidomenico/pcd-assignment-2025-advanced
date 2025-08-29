@@ -34,20 +34,20 @@ public class World implements Serializable {
         return foods;
     }
 
-    public List<Player> getPlayersExcludingSelf(final Player player) {
+    public synchronized List<Player> getPlayersExcludingSelf(final Player player) {
         return players.stream()
                 .filter(p -> !p.getId().equals(player.getId()))
                 .collect(Collectors.toList());
     }
 
-    public Optional<Player> getPlayerById(final String id) {
+    public synchronized Optional<Player> getPlayerById(final String id) {
         return players.stream()
                 .filter(p -> p.getId().equals(id))
                 .findFirst();
     }
 
 
-    public World removePlayers(final List<Player> playersToRemove) {
+    public synchronized World removePlayers(final List<Player> playersToRemove) {
         List<String> idsToRemove = playersToRemove.stream().map(Player::getId).toList();
         List<Player> newPlayers = players.stream()
                 .filter(p -> !idsToRemove.contains(p.getId()))
@@ -55,7 +55,7 @@ public class World implements Serializable {
         return new World(width, height, newPlayers, foods);
     }
 
-    public World removeFoods(List<Food> foodsToRemove) {
+    public synchronized World removeFoods(List<Food> foodsToRemove) {
         List<Food> newFoods = foods.stream()
                 .filter(f -> !foodsToRemove.contains(f)) // Assumes Food has proper equals/hashCode or relies on object identity if not overridden
                 .collect(Collectors.toList());
