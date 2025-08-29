@@ -22,8 +22,7 @@ public class ClientGameStateManager extends DefaultGameStateManager{
         final double newX = player.getX() + direction.x() * PLAYER_SPEED;
         final double newY = player.getY() + direction.y() * PLAYER_SPEED;
         Player movedPlayer = player.moveTo(newX, newY);
-        currentWorld.removePlayers(List.of(player));
-        List<Player> updatedPlayers = new ArrayList<>(currentWorld.getPlayers());
+        List<Player> updatedPlayers = new ArrayList<>(currentWorld.removePlayers(List.of(player)).getPlayers());
         updatedPlayers.add(movedPlayer);
         return new World(currentWorld.getWidth(), currentWorld.getHeight(), updatedPlayers, currentWorld.getFoods());
     }
@@ -32,7 +31,9 @@ public class ClientGameStateManager extends DefaultGameStateManager{
         if(world.getPlayerById(this.playerId).isPresent()){
             System.out.println("ID DEL PLAYER: " + this.playerId + "PLAYER PRESENTI: " + world.getPlayers() + " ID: " + (world.getPlayers().size() == 1 ? world.getPlayers().get(0).getId() : ""));
             List<Player> updatedPlayers = new ArrayList<>(world.removePlayers(List.of(world.getPlayerById(this.playerId).get())).getPlayers());
-            updatedPlayers.add(super.getWorld().getPlayerById(this.playerId).get());
+            Player currentPlayer = super.getWorld().getPlayerById(this.playerId).get();
+            updatedPlayers.add(new Player(currentPlayer.getId(), currentPlayer.getX(), currentPlayer.getY(),
+                    world.getPlayerById(this.playerId).get().getMass()));
             super.updateWorld(new World(world.getWidth(), world.getHeight(), updatedPlayers, world.getFoods()));
         }
     }

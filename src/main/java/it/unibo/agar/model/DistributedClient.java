@@ -92,7 +92,7 @@ public class DistributedClient {
         this.stateManager = new ClientGameStateManager(registration.world(), this.playerId);
 
         try {
-            confirmationChannel.queueDeclare(playerId, true, false, false, null);
+            inputChannel.queueDeclare(playerId, true, false, false, null);
             inputChannel.queueBind(playerId, SERVER_BROADCAST, playerId);
             messageRoutine(inputChannel, playerId);
         } catch (IOException e) {
