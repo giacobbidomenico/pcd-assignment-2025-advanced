@@ -25,7 +25,7 @@ public class LocalView extends JFrame {
         this.playerId = playerId;
 
         setTitle("Agar.io - Local View (" + playerId + ") (Java)");
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Dispose only this window
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setupWindowCloseListener();
         setPreferredSize(new Dimension(600, 600));
 
@@ -48,11 +48,9 @@ public class LocalView extends JFrame {
     }
 
     public void showGameOver() {
-        // Rimuovi il pannello di gioco corrente
         this.gamePanel.setVisible(false);
         this.remove(this.gamePanel);
 
-        // Aggiungi il nuovo pannello di game over
         GameOverPanel gameOverPanel = new GameOverPanel();
         this.add(gameOverPanel, BorderLayout.CENTER);
 

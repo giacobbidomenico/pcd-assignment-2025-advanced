@@ -16,7 +16,7 @@ public class GlobalView extends JFrame {
     public GlobalView(DistributedGameStateManager gameStateManager) {
         stateManager = gameStateManager;
         setTitle("Agar.io - Global View (Java)");
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Or DISPOSE_ON_CLOSE if multiple windows
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setupWindowCloseListener();
         setPreferredSize(new Dimension(800, 800));
 

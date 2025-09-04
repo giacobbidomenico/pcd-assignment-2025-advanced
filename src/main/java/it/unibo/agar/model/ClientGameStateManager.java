@@ -28,7 +28,6 @@ public class ClientGameStateManager extends DefaultGameStateManager{
 
     public void updateState(World world){
         if(world.getPlayerById(this.playerId).isPresent()){
-            System.out.println("ID DEL PLAYER: " + this.playerId + "PLAYER PRESENTI: " + world.getPlayers() + " ID: " + (world.getPlayers().size() == 1 ? world.getPlayers().get(0).getId() : ""));
             List<Player> updatedPlayers = new ArrayList<>(world.removePlayers(List.of(world.getPlayerById(this.playerId).get())).getPlayers());
             Player currentPlayer = super.getWorld().getPlayerById(this.playerId).get();
             updatedPlayers.add(new Player(currentPlayer.getId(), currentPlayer.getX(), currentPlayer.getY(),

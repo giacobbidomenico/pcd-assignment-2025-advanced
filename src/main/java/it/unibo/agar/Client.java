@@ -5,12 +5,8 @@ import it.unibo.agar.model.*;
 import it.unibo.agar.view.LocalView;
 import javax.swing.*;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 
 public class Client {
@@ -36,7 +32,6 @@ public class Client {
             localView = new LocalView(client, client.getGameState().getPlayerId());
             localView.setVisible(true);
 
-            // Inizializzazione del loop di gioco
             Timer gameLoopTimer = new Timer();
             gameLoopTimer.scheduleAtFixedRate(new TimerTask() {
                 @Override
@@ -55,7 +50,7 @@ public class Client {
             if(client != null){
                 client.terminate();
             }
-            System.err.println("Il client è terminato a causa di un'eccezione: " + e.getMessage());
+            System.err.println(e.getMessage());
         }
     }
 }

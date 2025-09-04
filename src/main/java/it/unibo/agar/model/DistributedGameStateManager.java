@@ -54,8 +54,6 @@ public class DistributedGameStateManager implements GameStateManager {
         messageRoutine(inputChannel, UPDATE_QUEUE);
 
         this.running = true;
-
-        System.out.println("Distributed Game State Manager pronto.");
     }
 
     private void setupRabbitMQ() throws IOException {
@@ -77,7 +75,7 @@ public class DistributedGameStateManager implements GameStateManager {
                 Messages.Message message = (Messages.Message) Serializer.deserialize(delivery.getBody());
                 messages.add(message);
             } catch (Exception e) {
-                System.err.println("Errore durante l'elaborazione del comando: " + e.getMessage());
+                System.err.println("Error during command elaboration: " + e.getMessage());
                 e.printStackTrace();
             }
         };
@@ -96,8 +94,6 @@ public class DistributedGameStateManager implements GameStateManager {
         registrationChannel.queueBind(registration.queue(), CLIENT_TO_SERVER, registration.queue());
 
         clientsQueues.put(playerId, registration.queue());
-        System.out.println("NEW PLAYER REGISTERED: " + playerId);
-        System.out.println("Player presenti: " + this.getWorld().getPlayers() + " ID: " + (this.getWorld().getPlayers().size() == 1 ? this.getWorld().getPlayers().get(0).getId() : "")  );
         registrationChannel.basicPublish(
                 CLIENT_TO_SERVER,
                 registration.queue(),
@@ -155,7 +151,7 @@ public class DistributedGameStateManager implements GameStateManager {
                 connection.close();
             }
         } catch (Exception e) {
-            System.err.println("Errore durante la chiusura delle risorse RabbitMQ: " + e.getMessage());
+            System.err.println("Error while closing RabbitMq resources: " + e.getMessage());
             throw new RuntimeException(e);
         } finally {
             this.running = false;
@@ -182,7 +178,6 @@ public class DistributedGameStateManager implements GameStateManager {
                         }
                     }
                     case Messages.PlayerUpdate m -> {
-                        System.out.println("PLAYER UPDATE: " + m.playerId() + " " + m.posX() + " " + m.posY() + " " + m.dirX() + " " + m.dirY());
                         localGameStateManager.movePlayer(m.playerId(), m.posX(), m.posY());
                         localGameStateManager.setPlayerDirection(m.playerId(), m.dirX(), m.dirY());
                     }
@@ -200,10 +195,9 @@ public class DistributedGameStateManager implements GameStateManager {
             this.localGameStateManager.tick();
             this.notifyGameOver(this.localGameStateManager.getPlayersToRemove());
             try {
-                System.out.println("Player presenti: " + this.getWorld().getPlayers() + " ID: " + (this.getWorld().getPlayers().size() == 1 ? this.getWorld().getPlayers().get(0).getId() : "")  );
                 outputChannel.basicPublish(SERVER_BROADCAST, "", null, Serializer.serialize(new Messages.StateUpdate(this.getWorld())));
             } catch (IOException e) {
-                System.err.println("Errore nella trasmissione dello stato del gioco: " + e.getMessage());
+                System.err.println("Error while transmitting message: " + e.getMessage());
             }
         }
     }

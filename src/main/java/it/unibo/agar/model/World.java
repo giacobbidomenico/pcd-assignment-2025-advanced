@@ -57,7 +57,7 @@ public class World implements Serializable {
 
     public synchronized World removeFoods(List<Food> foodsToRemove) {
         List<Food> newFoods = foods.stream()
-                .filter(f -> !foodsToRemove.contains(f)) // Assumes Food has proper equals/hashCode or relies on object identity if not overridden
+                .filter(f -> !foodsToRemove.contains(f))
                 .collect(Collectors.toList());
         return new World(width, height, players, newFoods);
     }

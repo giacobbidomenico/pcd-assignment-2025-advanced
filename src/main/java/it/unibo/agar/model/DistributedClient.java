@@ -43,9 +43,7 @@ public class DistributedClient {
         requestRegistration();
         Messages.RegistrationACK result;
         try {
-            // Provo a prendere il risultato entro 2 secondi
             result = registrationFuture.get(10, TimeUnit.SECONDS);
-            System.out.println("Risultato: " + result);
             confirm(result);
         } catch (TimeoutException e) {
             System.out.println("No Server Response received.");
@@ -93,8 +91,7 @@ public class DistributedClient {
                     messages.add(message);
                 }
             } catch (Exception e) {
-                System.err.println("Errore durante l'elaborazione del comando: " + e.getMessage() + " Tipo di " +
-                        "messaggio ricevuto: " + delivery.getBody().getClass() );
+                System.err.println("Error during command elaboration: " + e.getMessage() + "Message received: " + delivery.getBody().getClass() );
                 e.printStackTrace();
             }
         };
@@ -144,7 +141,7 @@ public class DistributedClient {
                 connection.close();
             }
         } catch (Exception e) {
-            System.err.println("Errore durante la chiusura delle risorse RabbitMQ: " + e.getMessage());
+            System.err.println("Error occurred while closing RabbitMq resources: " + e.getMessage());
             throw new RuntimeException(e);
         } finally {
             this.running = false;
@@ -175,13 +172,11 @@ public class DistributedClient {
             try {
                 Player currentPlayer = this.stateManager.getWorld().getPlayerById(this.playerId).get();
                 Position directions = this.stateManager.getDirection();
-                System.out.println("INVIO POSIZIONE AGGIORNATA: " + currentPlayer.getX() + " " + currentPlayer.getY() +
-                        " DIREZIONI: " + stateManager.playerDirections.get(this.playerId).x() + " " + stateManager.playerDirections.get(this.playerId).y());
                 outputChannel.basicPublish(CLIENT_TO_SERVER, UPDATE_QUEUE, null,
                         Serializer.serialize( new Messages.PlayerUpdate(this.playerId, currentPlayer.getX(),
                                 currentPlayer.getY(), directions.x(), directions.y())));
             } catch (IOException e) {
-                System.err.println("Errore nella trasmissione dello stato del gioco: " + e.getMessage());
+                System.err.println("Error during the transmission of the game state: " + e.getMessage());
             }
         }
     }

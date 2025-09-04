@@ -26,7 +26,6 @@ public class Server {
             Connection connection = factory.newConnection();
             Channel channel = connection.createChannel();
 
-            // Il DistributedGameStateManager gestisce la logica di gioco e i comandi in entrata.
             distributedManager = new DistributedGameStateManager(connection);
 
             SwingUtilities.invokeLater(() -> {
@@ -34,7 +33,6 @@ public class Server {
                 globalView.ifPresent(x -> x.setVisible(true));
             });
 
-            // Timer per il loop principale del gioco
             Timer gameLoopTimer = new Timer();
             gameLoopTimer.scheduleAtFixedRate(new TimerTask() {
                 @Override
@@ -47,14 +45,14 @@ public class Server {
                 }
             }, 0, GAME_TICK_RATE_MS);
 
-            System.out.println("Game server avviato. Premi CTRL-C per uscire.");
+            System.out.println("Game server started. Press CTRL-C to exit.");
         } catch (Exception e) {
             e.printStackTrace();
             if (distributedManager != null) {
                 distributedManager.notifyClose();
                 distributedManager.tick();
             }
-            System.err.println("Il programma è terminato a causa di un'eccezione non gestita: " + e.getMessage());
+            System.err.println(e.getMessage());
         }
     }
 }
