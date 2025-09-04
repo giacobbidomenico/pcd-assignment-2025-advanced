@@ -68,7 +68,7 @@ public class DefaultGameStateManager implements GameStateManager {
                 .removePlayers(playersToRemove);
     }
 
-    private Player growPlayer(final World world, final Player player) {
+    protected Player growPlayer(final World world, final Player player) {
         final Player afterFood = eatenFoods(world, player).stream()
                 .reduce(player, Player::grow, (p1, p2) -> p1);
 
@@ -76,13 +76,13 @@ public class DefaultGameStateManager implements GameStateManager {
                 .reduce(afterFood, Player::grow, (p1, p2) -> p1);
     }
 
-    private List<Food> eatenFoods(final World world, final Player player) {
+    protected List<Food> eatenFoods(final World world, final Player player) {
         return world.getFoods().stream()
                 .filter(food -> EatingManager.canEatFood(player, food))
                 .toList();
     }
 
-    private List<Player> eatenPlayers(final World world, final Player player) {
+    protected List<Player> eatenPlayers(final World world, final Player player) {
         return world.getPlayersExcludingSelf(player).stream()
                 .filter(other -> EatingManager.canEatPlayer(player, other))
                 .toList();

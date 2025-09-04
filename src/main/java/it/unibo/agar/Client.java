@@ -19,6 +19,8 @@ public class Client {
     private static Channel channel;
     private static LocalView localView;
     private static String playerId;
+    private static DistributedClient client = null;
+
 
     public static void main(String[] args) throws IOException, TimeoutException {
         try {
@@ -26,9 +28,12 @@ public class Client {
             factory.setHost(RABBIT_MQ_HOST);
             Connection connection = factory.newConnection();
 
-            DistributedClient client = new DistributedClient(connection);
+            client = new DistributedClient(connection);
 
-            localView = new LocalView(client.getGameState(), client.getGameState().getPlayerId());
+            if(!client.isRunning()){
+                System.exit(0);
+            }
+            localView = new LocalView(client, client.getGameState().getPlayerId());
             localView.setVisible(true);
 
             // Inizializzazione del loop di gioco
@@ -36,13 +41,20 @@ public class Client {
             gameLoopTimer.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
-
+                    if(!client.isRunning()){
+                        this.cancel();
+                        SwingUtilities.invokeLater(localView::showGameOver);
+                    }
                     client.tick();
                     SwingUtilities.invokeLater(localView::repaintView);
                 }
             }, 0, GAME_TICK_RATE_MS);
+
         } catch (Exception e) {
             e.printStackTrace();
+            if(client != null){
+                client.terminate();
+            }
             System.err.println("Il client è terminato a causa di un'eccezione: " + e.getMessage());
         }
     }

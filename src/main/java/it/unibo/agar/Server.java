@@ -17,6 +17,7 @@ public class Server {
     private static final String RABBIT_MQ_HOST = "localhost";
     private static final int GAME_TICK_RATE_MS = 30;
     private static Optional<GlobalView> globalView = Optional.empty();
+    private static DistributedGameStateManager distributedManager = null;
 
     public static void main(String[] args) throws IOException, TimeoutException {
         try {
@@ -26,7 +27,7 @@ public class Server {
             Channel channel = connection.createChannel();
 
             // Il DistributedGameStateManager gestisce la logica di gioco e i comandi in entrata.
-            DistributedGameStateManager distributedManager = new DistributedGameStateManager(connection);
+            distributedManager = new DistributedGameStateManager(connection);
 
             SwingUtilities.invokeLater(() -> {
                 globalView = Optional.of(new GlobalView(distributedManager));
@@ -38,6 +39,9 @@ public class Server {
             gameLoopTimer.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
+                    if(!distributedManager.isRunning()){
+                        this.cancel();
+                    }
                     distributedManager.tick();
                     SwingUtilities.invokeLater(() -> globalView.ifPresent(GlobalView::repaintView));
                 }
@@ -46,6 +50,10 @@ public class Server {
             System.out.println("Game server avviato. Premi CTRL-C per uscire.");
         } catch (Exception e) {
             e.printStackTrace();
+            if (distributedManager != null) {
+                distributedManager.notifyClose();
+                distributedManager.tick();
+            }
             System.err.println("Il programma è terminato a causa di un'eccezione non gestita: " + e.getMessage());
         }
     }

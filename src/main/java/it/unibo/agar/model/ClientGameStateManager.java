@@ -2,7 +2,6 @@ package it.unibo.agar.model;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ClientGameStateManager extends DefaultGameStateManager{
     private final String playerId;
@@ -27,7 +26,7 @@ public class ClientGameStateManager extends DefaultGameStateManager{
         return new World(currentWorld.getWidth(), currentWorld.getHeight(), updatedPlayers, currentWorld.getFoods());
     }
 
-    public void updateOthers(World world){
+    public void updateState(World world){
         if(world.getPlayerById(this.playerId).isPresent()){
             System.out.println("ID DEL PLAYER: " + this.playerId + "PLAYER PRESENTI: " + world.getPlayers() + " ID: " + (world.getPlayers().size() == 1 ? world.getPlayers().get(0).getId() : ""));
             List<Player> updatedPlayers = new ArrayList<>(world.removePlayers(List.of(world.getPlayerById(this.playerId).get())).getPlayers());

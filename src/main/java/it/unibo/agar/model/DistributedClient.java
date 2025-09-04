@@ -8,10 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.*;
 
 public class DistributedClient {
     private static final String CLIENT_TO_SERVER = "client_to_server";
@@ -19,33 +16,50 @@ public class DistributedClient {
     private static final String REQUEST_QUEUE = "request_queue";
     private static final String UPDATE_QUEUE = "update_queue";
 
+    private final Connection connection;
     private final Channel registrationChannel;
-    private final Channel confirmationChannel;
+    private final Channel notificationChannel;
     private final Channel inputChannel;
     private final Channel outputChannel;
-    private String confirmationQueue = "";
+    private String notificationQueue = "";
 
     private final BlockingQueue<Messages.Message> messages = new LinkedBlockingQueue<>();
     private final CompletableFuture<Messages.RegistrationACK> registrationFuture = new CompletableFuture<>();
 
-    private String playerId;
+    private String playerId = "";
     private ClientGameStateManager stateManager;
 
+    private boolean running = false;
+
     public DistributedClient(final Connection connection) throws IOException, ExecutionException, InterruptedException {
-        registrationChannel = connection.createChannel();
-        confirmationChannel = connection.createChannel();
-        inputChannel = connection.createChannel();
-        outputChannel = connection.createChannel();
+        this.connection = connection;
+        registrationChannel = this.connection.createChannel();
+        notificationChannel = this.connection.createChannel();
+        inputChannel = this.connection.createChannel();
+        outputChannel = this.connection.createChannel();
 
         setupRabbitMQ();
-        messageRoutine(confirmationChannel, confirmationQueue);
+        messageRoutine(notificationChannel, notificationQueue);
         requestRegistration();
-        confirm(registrationFuture.get());
+        Messages.RegistrationACK result;
+        try {
+            // Provo a prendere il risultato entro 2 secondi
+            result = registrationFuture.get(10, TimeUnit.SECONDS);
+            System.out.println("Risultato: " + result);
+            confirm(result);
+        } catch (TimeoutException e) {
+            System.out.println("No Server Response received.");
+            registrationFuture.cancel(true);
+            terminate();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     private void requestRegistration(){
         try {
-            registrationChannel.basicPublish(CLIENT_TO_SERVER, REQUEST_QUEUE, null, Serializer.serialize(new Messages.RegistrationRequest(confirmationQueue)));
+            registrationChannel.basicPublish(CLIENT_TO_SERVER, REQUEST_QUEUE, null, Serializer.serialize(new Messages.RegistrationRequest(notificationQueue)));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -53,19 +67,19 @@ public class DistributedClient {
 
     private void setupRabbitMQ() throws IOException {
         registrationChannel.exchangeDeclare(CLIENT_TO_SERVER, "direct");
-        confirmationChannel.exchangeDeclare(CLIENT_TO_SERVER, "direct");
+        notificationChannel.exchangeDeclare(CLIENT_TO_SERVER, "direct");
         inputChannel.exchangeDeclare(SERVER_BROADCAST, "fanout");
         outputChannel.exchangeDeclare(CLIENT_TO_SERVER, "direct");
 
-        registrationChannel.queueDeclare(REQUEST_QUEUE, true,false,false,null);
-        outputChannel.queueDeclare(UPDATE_QUEUE, true, false, false, null);
+        registrationChannel.queueDeclare(REQUEST_QUEUE, false, false, true, null);
+        outputChannel.queueDeclare(UPDATE_QUEUE, false, false, true, null);
 
         String randomUUID = UUID.randomUUID().toString();
-        confirmationQueue = "client.inbox." + randomUUID;
-        confirmationChannel.queueDeclare(confirmationQueue, true, false, false, null);
+        notificationQueue = "client.inbox." + randomUUID;
+        notificationChannel.queueDeclare(notificationQueue, false, false, true, null);
 
         registrationChannel.queueBind(REQUEST_QUEUE, CLIENT_TO_SERVER, REQUEST_QUEUE);
-        confirmationChannel.queueBind(confirmationQueue, CLIENT_TO_SERVER, confirmationQueue);
+        notificationChannel.queueBind(notificationQueue, CLIENT_TO_SERVER, notificationQueue);
         outputChannel.queueBind(UPDATE_QUEUE, CLIENT_TO_SERVER, UPDATE_QUEUE);
     }
 
@@ -91,8 +105,9 @@ public class DistributedClient {
         this.playerId = registration.playerId();
         this.stateManager = new ClientGameStateManager(registration.world(), this.playerId);
 
+        this.running = true;
         try {
-            inputChannel.queueDeclare(playerId, true, false, false, null);
+            inputChannel.queueDeclare(playerId, false, false, true, null);
             inputChannel.queueBind(playerId, SERVER_BROADCAST, playerId);
             messageRoutine(inputChannel, playerId);
         } catch (IOException e) {
@@ -100,23 +115,74 @@ public class DistributedClient {
         }
     }
 
+    public void terminate(){
+        try {
+            if (registrationChannel != null && registrationChannel.isOpen()) {
+                if (playerId.isEmpty()) {
+                    registrationChannel.queueDelete(REQUEST_QUEUE);
+                }
+                registrationChannel.close();
+            }
+            if (notificationChannel != null && notificationChannel.isOpen()) {
+                notificationChannel.queueDelete(notificationQueue);
+                notificationChannel.close();
+            }
+            if (inputChannel != null && inputChannel.isOpen()) {
+                if(!this.playerId.isEmpty())
+                    inputChannel.queueDelete(this.playerId);
+                inputChannel.close();
+            }
+            if (outputChannel != null && outputChannel.isOpen()) {
+                if (this.playerId.isEmpty()) {
+                    outputChannel.queueDelete(UPDATE_QUEUE);
+                }
+                outputChannel.basicPublish(CLIENT_TO_SERVER, UPDATE_QUEUE, null,
+                        Serializer.serialize(new Messages.UnRegistration(this.playerId)));
+                outputChannel.close();
+            }
+            if (connection != null && connection.isOpen()) {
+                connection.close();
+            }
+        } catch (Exception e) {
+            System.err.println("Errore durante la chiusura delle risorse RabbitMQ: " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+            this.running = false;
+        }
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
     public void tick() {
         List<Messages.Message> s = new ArrayList<>();
         messages.drainTo(s);
 
-        s.forEach(message -> stateManager.updateOthers(((Messages.StateUpdate) message).world()));
-        this.stateManager.tick();
+        s.forEach(message -> {
+            if (this.isRunning()){
+                switch (message) {
+                    case Messages.StateUpdate stateMessage -> stateManager.updateState(((Messages.StateUpdate) stateMessage).world());
+                    case Messages.GameOver ignored -> terminate();
+                    default -> {}
+                }
+            }
+        });
 
-        try {
-            Player currentPlayer = this.stateManager.getWorld().getPlayerById(this.playerId).get();
-            Position directions = this.stateManager.getDirection();
-            System.out.println("INVIO POSIZIONE AGGIORNATA: " + currentPlayer.getX() + " " + currentPlayer.getY() +
-                    " DIREZIONI: " + stateManager.playerDirections.get(this.playerId).x() + " " + stateManager.playerDirections.get(this.playerId).y());
-            outputChannel.basicPublish(CLIENT_TO_SERVER, UPDATE_QUEUE, null,
-                    Serializer.serialize( new Messages.PlayerUpdate(this.playerId, currentPlayer.getX(),
-                            currentPlayer.getY(), directions.x(), directions.y())));
-        } catch (IOException e) {
-            System.err.println("Errore nella trasmissione dello stato del gioco: " + e.getMessage());
+        if(this.running){
+            this.stateManager.tick();
+
+            try {
+                Player currentPlayer = this.stateManager.getWorld().getPlayerById(this.playerId).get();
+                Position directions = this.stateManager.getDirection();
+                System.out.println("INVIO POSIZIONE AGGIORNATA: " + currentPlayer.getX() + " " + currentPlayer.getY() +
+                        " DIREZIONI: " + stateManager.playerDirections.get(this.playerId).x() + " " + stateManager.playerDirections.get(this.playerId).y());
+                outputChannel.basicPublish(CLIENT_TO_SERVER, UPDATE_QUEUE, null,
+                        Serializer.serialize( new Messages.PlayerUpdate(this.playerId, currentPlayer.getX(),
+                                currentPlayer.getY(), directions.x(), directions.y())));
+            } catch (IOException e) {
+                System.err.println("Errore nella trasmissione dello stato del gioco: " + e.getMessage());
+            }
         }
     }
 

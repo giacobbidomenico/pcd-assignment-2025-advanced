@@ -1,14 +1,13 @@
 package it.unibo.agar.model;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import com.rabbitmq.client.*;
 
@@ -28,11 +27,14 @@ public class DistributedGameStateManager implements GameStateManager {
     private final AtomicInteger playerCounter = new AtomicInteger(0);
 
     private final Channel registrationChannel;
-    private final Channel confirmationChannel;
+    private final Channel notificationChannel;
     private final Channel inputChannel;
     private final Channel outputChannel;
 
     private final BlockingQueue<Messages.Message> messages = new LinkedBlockingQueue<>();
+    private final ConcurrentMap<String, String> clientsQueues = new ConcurrentHashMap<>();
+
+    private boolean running = false;
 
     public DistributedGameStateManager(final Connection connection) throws IOException {
         this.connection = connection;
@@ -41,27 +43,29 @@ public class DistributedGameStateManager implements GameStateManager {
         World initialWorld = new World(WORLD_WIDTH, WORLD_HEIGHT, List.of(), initialFoods);
         this.localGameStateManager = new ServerGameStateManager(initialWorld);
 
-        registrationChannel = connection.createChannel();
-        confirmationChannel = connection.createChannel();
-        inputChannel = connection.createChannel();
-        outputChannel = connection.createChannel();
+        registrationChannel = this.connection.createChannel();
+        notificationChannel = this.connection.createChannel();
+        inputChannel = this.connection.createChannel();
+        outputChannel = this.connection.createChannel();
 
         setupRabbitMQ();
 
         messageRoutine(registrationChannel, REQUEST_QUEUE);
         messageRoutine(inputChannel, UPDATE_QUEUE);
 
+        this.running = true;
+
         System.out.println("Distributed Game State Manager pronto.");
     }
 
     private void setupRabbitMQ() throws IOException {
         registrationChannel.exchangeDeclare(CLIENT_TO_SERVER, "direct");
-        confirmationChannel.exchangeDeclare(CLIENT_TO_SERVER, "direct");
+        notificationChannel.exchangeDeclare(CLIENT_TO_SERVER, "direct");
         inputChannel.exchangeDeclare(CLIENT_TO_SERVER, "direct");
         outputChannel.exchangeDeclare(SERVER_BROADCAST, "fanout");
 
-        registrationChannel.queueDeclare(REQUEST_QUEUE, true,false,false,null);
-        inputChannel.queueDeclare(UPDATE_QUEUE, true, false, false, null);
+        registrationChannel.queueDeclare(REQUEST_QUEUE, false, false, true, null);
+        inputChannel.queueDeclare(UPDATE_QUEUE, false, false, true, null);
 
         registrationChannel.queueBind(REQUEST_QUEUE, CLIENT_TO_SERVER, REQUEST_QUEUE);
         inputChannel.queueBind(UPDATE_QUEUE, CLIENT_TO_SERVER, UPDATE_QUEUE);
@@ -80,35 +84,6 @@ public class DistributedGameStateManager implements GameStateManager {
         channel.basicConsume(queueName, true, deliverCallback, consumerTag -> {});
     }
 
-//    private void startCommandConsumer() throws IOException {
-//        DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-//            // L'intero blocco di elaborazione dei messaggi è stato racchiuso in un try-catch
-//            try {
-//                String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
-//                System.out.println("Ricevuto comando: " + message);
-//
-//                if (message.startsWith("REGISTER")) {
-//                    registerPlayer(delivery);
-//                } else if (message.startsWith("MOVE")) {
-//                    String[] parts = message.substring(5).split(",");
-//                    if (parts.length == 5) {
-//                        localGameStateManager.movePlayer(parts[0], Double.parseDouble(parts[1]),
-//                                Double.parseDouble(parts[2]));
-//                        setPlayerDirection(parts[0], Double.parseDouble(parts[3]), Double.parseDouble(parts[4]));
-//                    }
-//                } else if (message.startsWith("UNREGISTER")) {
-//                    String playerId = message.substring(11);
-//                    unregisterPlayer(playerId);
-//                }
-//            } catch (Exception e) {
-//                // Gestisce qualsiasi eccezione in modo da non chiudere il canale RabbitMQ
-//                System.err.println("Errore durante l'elaborazione del comando: " + e.getMessage());
-//                e.printStackTrace();
-//            }
-//        };
-//        channel.basicConsume(CMD_QUEUE_NAME, true, deliverCallback, consumerTag -> {});
-//    }
-
     private void registerPlayer(Messages.RegistrationRequest registration) throws IOException {
         String playerId = "p" + playerCounter.incrementAndGet();
         World currentWorld = localGameStateManager.getWorld();
@@ -120,6 +95,7 @@ public class DistributedGameStateManager implements GameStateManager {
 
         registrationChannel.queueBind(registration.queue(), CLIENT_TO_SERVER, registration.queue());
 
+        clientsQueues.put(playerId, registration.queue());
         System.out.println("NEW PLAYER REGISTERED: " + playerId);
         System.out.println("Player presenti: " + this.getWorld().getPlayers() + " ID: " + (this.getWorld().getPlayers().size() == 1 ? this.getWorld().getPlayers().get(0).getId() : "")  );
         registrationChannel.basicPublish(
@@ -128,15 +104,6 @@ public class DistributedGameStateManager implements GameStateManager {
                 null,
                 Serializer.serialize(new Messages.RegistrationACK(playerId, localGameStateManager.getWorld()))
         );
-    }
-
-    private void unregisterPlayer(final String playerId) {
-        World currentWorld = localGameStateManager.getWorld();
-        List<Player> updatedPlayers = currentWorld.getPlayers().stream()
-                .filter(p -> !p.getId().equals(playerId))
-                .toList();
-        localGameStateManager.updateWorld(new World(currentWorld.getWidth(), currentWorld.getHeight(), updatedPlayers, currentWorld.getFoods()));
-        System.out.println("Giocatore disconnesso: " + playerId);
     }
 
     @Override
@@ -149,38 +116,103 @@ public class DistributedGameStateManager implements GameStateManager {
         this.localGameStateManager.setPlayerDirection(playerId, dx, dy);
     }
 
+    private void notifyGameOver(List<Player> playersToRemove){
+        playersToRemove.forEach(player -> {
+            try {
+                notificationChannel.basicPublish(CLIENT_TO_SERVER,
+                        clientsQueues.get(player.getId()), null, Serializer.serialize(new Messages.GameOver()));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private void terminate(){
+        try {
+            if (registrationChannel != null && registrationChannel.isOpen()) {
+                registrationChannel.queueDelete(REQUEST_QUEUE);
+                registrationChannel.close();
+            }
+            if (notificationChannel != null && notificationChannel.isOpen()) {
+                clientsQueues.forEach( (id, queue) -> {
+                    try {
+                        notificationChannel.basicPublish(CLIENT_TO_SERVER, queue, null,
+                         Serializer.serialize(new Messages.GameOver()));
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+                notificationChannel.close();
+            }
+            if (inputChannel != null && inputChannel.isOpen()) {
+                inputChannel.queueDelete(UPDATE_QUEUE);
+                inputChannel.close();
+            }
+            if (outputChannel != null && outputChannel.isOpen()) {
+                outputChannel.close();
+            }
+            if (connection != null && connection.isOpen()) {
+                connection.close();
+            }
+        } catch (Exception e) {
+            System.err.println("Errore durante la chiusura delle risorse RabbitMQ: " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+            this.running = false;
+        }
+    }
+
+    public void notifyClose(){
+        messages.add(new Messages.GameOver());
+    }
+
     @Override
     public void tick() {
         List<Messages.Message> s = new ArrayList<>();
         messages.drainTo(s);
 
         s.forEach(message -> {
-            switch (message){
-                case Messages.RegistrationRequest registration -> {
-                    try {
-                        registerPlayer(registration);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
+            if (this.running){
+                switch (message){
+                    case Messages.RegistrationRequest registration -> {
+                        try {
+                            registerPlayer(registration);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
+                    case Messages.PlayerUpdate m -> {
+                        System.out.println("PLAYER UPDATE: " + m.playerId() + " " + m.posX() + " " + m.posY() + " " + m.dirX() + " " + m.dirY());
+                        localGameStateManager.movePlayer(m.playerId(), m.posX(), m.posY());
+                        localGameStateManager.setPlayerDirection(m.playerId(), m.dirX(), m.dirY());
+                    }
+                    case Messages.UnRegistration m -> {
+                        this.localGameStateManager.removePlayer(m.playerId());
+                        this.clientsQueues.remove(m.playerId());
+                    }
+                    case Messages.GameOver ignored -> this.terminate();
+                    default -> {}
                 }
-                case Messages.PlayerUpdate m -> {
-                    System.out.println("PLAYER UPDATE: " + m.playerId() + " " + m.posX() + " " + m.posY() + " " + m.dirX() + " " + m.dirY());
-                    localGameStateManager.movePlayer(m.playerId(), m.posX(), m.posY());
-                    localGameStateManager.setPlayerDirection(m.playerId(), m.dirX(), m.dirY());
-                }
-                case Messages.RegistrationACK unregistration -> {}
-                default -> {}
             }
         });
 
-        this.localGameStateManager.tick();
-        try {
-            System.out.println("Player presenti: " + this.getWorld().getPlayers() + " ID: " + (this.getWorld().getPlayers().size() == 1 ? this.getWorld().getPlayers().get(0).getId() : "")  );
-            outputChannel.basicPublish(SERVER_BROADCAST, "", null, Serializer.serialize(new Messages.StateUpdate(this.getWorld())));
-        } catch (IOException e) {
-            System.err.println("Errore nella trasmissione dello stato del gioco: " + e.getMessage());
+        if (this.running) {
+            this.localGameStateManager.tick();
+            this.notifyGameOver(this.localGameStateManager.getPlayersToRemove());
+            try {
+                System.out.println("Player presenti: " + this.getWorld().getPlayers() + " ID: " + (this.getWorld().getPlayers().size() == 1 ? this.getWorld().getPlayers().get(0).getId() : "")  );
+                outputChannel.basicPublish(SERVER_BROADCAST, "", null, Serializer.serialize(new Messages.StateUpdate(this.getWorld())));
+            } catch (IOException e) {
+                System.err.println("Errore nella trasmissione dello stato del gioco: " + e.getMessage());
+            }
         }
     }
 
+    public ServerGameStateManager getLocalGameStateManager() {
+        return localGameStateManager;
+    }
 
+    public boolean isRunning() {
+        return this.running;
+    }
 }

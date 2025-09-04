@@ -7,6 +7,8 @@ public class Messages {
     public record PlayerUpdate(String playerId, Double posX, Double posY, Double dirX, Double dirY) implements java.io.Serializable,
             Message {};
     public record StateUpdate(World world) implements java.io.Serializable, Message {};
+    public record GameOver() implements java.io.Serializable, Message {};
+    public record UnRegistration(String playerId) implements java.io.Serializable, Message {};
 
     public interface Message {};
 }

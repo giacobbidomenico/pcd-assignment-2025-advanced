@@ -1,5 +1,6 @@
 package it.unibo.agar.view;
 
+import it.unibo.agar.model.DistributedClient;
 import it.unibo.agar.model.GameStateManager;
 import it.unibo.agar.model.Player;
 
@@ -7,29 +8,56 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.Optional;
 
 public class LocalView extends JFrame {
     private static final double SENSITIVITY = 2;
     private final GamePanel gamePanel;
+    private final DistributedClient distributedClient;
     private final GameStateManager gameStateManager;
     private final String playerId;
 
-    public LocalView(GameStateManager gameStateManager, String playerId) {
-        this.gameStateManager = gameStateManager;
+    public LocalView(DistributedClient distributedClient, String playerId) {
+        this.distributedClient = distributedClient;
+        this.gameStateManager = distributedClient.getGameState();
         this.playerId = playerId;
 
         setTitle("Agar.io - Local View (" + playerId + ") (Java)");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Dispose only this window
+        setupWindowCloseListener();
         setPreferredSize(new Dimension(600, 600));
 
         this.gamePanel = new GamePanel(gameStateManager, playerId);
         add(this.gamePanel, BorderLayout.CENTER);
 
         setupMouseControls();
-
         pack();
         setLocationRelativeTo(null); // Center on screen
+    }
+
+    private void setupWindowCloseListener() {
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                System.out.println("Closing local view for player " + playerId + ". Performing graceful shutdown...");
+                distributedClient.terminate();
+            }
+        });
+    }
+
+    public void showGameOver() {
+        // Rimuovi il pannello di gioco corrente
+        this.gamePanel.setVisible(false);
+        this.remove(this.gamePanel);
+
+        // Aggiungi il nuovo pannello di game over
+        GameOverPanel gameOverPanel = new GameOverPanel();
+        this.add(gameOverPanel, BorderLayout.CENTER);
+
+        this.revalidate();
+        this.repaint();
     }
 
     private void setupMouseControls() {
