@@ -5,30 +5,39 @@ import it.unibo.agar.model.*;
 import it.unibo.agar.view.LocalView;
 import javax.swing.*;
 import java.io.IOException;
+import java.rmi.NoSuchObjectException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeoutException;
 
 public class Client {
-    private static final String RABBIT_MQ_HOST = "localhost";
     private static final int GAME_TICK_RATE_MS = 30;
-    private static Channel channel;
     private static LocalView localView;
-    private static String playerId;
     private static DistributedClient client = null;
-
 
     public static void main(String[] args) throws IOException, TimeoutException {
         try {
-            ConnectionFactory factory = new ConnectionFactory();
-            factory.setHost(RABBIT_MQ_HOST);
-            Connection connection = factory.newConnection();
-
-            client = new DistributedClient(connection);
-
-            if(!client.isRunning()){
+            var registry = LocateRegistry.getRegistry();
+            GameServerInterface remoteServer = null;
+            try {
+                remoteServer = (GameServerInterface) registry.lookup("remoteServer");
+            } catch (NotBoundException e) {
+                System.err.println("Server error: could not reach the server.");
                 System.exit(0);
             }
+
+            client = new DistributedClient(remoteServer);
+            try {
+                client.registration();
+            } catch (RuntimeException e) {
+                System.err.println("Server error: could not reach the server.");
+                System.exit(0);
+            }
+
             localView = new LocalView(client, client.getGameState().getPlayerId());
             localView.setVisible(true);
 
@@ -40,7 +49,13 @@ public class Client {
                         this.cancel();
                         SwingUtilities.invokeLater(localView::showGameOver);
                     }
-                    client.tick();
+                    try {
+                        client.tick();
+                    } catch (RemoteException e) {
+                        System.err.println("Server error: could not reach the server.");
+                        this.cancel();
+                        SwingUtilities.invokeLater(localView::showGameOver);
+                    }
                     SwingUtilities.invokeLater(localView::repaintView);
                 }
             }, 0, GAME_TICK_RATE_MS);

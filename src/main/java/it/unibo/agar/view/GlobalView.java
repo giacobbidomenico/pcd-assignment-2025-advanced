@@ -32,7 +32,7 @@ public class GlobalView extends JFrame {
             @Override
             public void windowClosing(WindowEvent e) {
                 System.out.println("Closing global view and notifying game over. Performing graceful shutdown...");
-                stateManager.notifyClose();
+                stateManager.terminate();
             }
         });
     }

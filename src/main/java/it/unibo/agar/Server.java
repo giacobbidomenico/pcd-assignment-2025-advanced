@@ -4,34 +4,40 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import it.unibo.agar.model.DistributedGameStateManager;
+import it.unibo.agar.model.GameServerInterface;
 import it.unibo.agar.view.GlobalView;
 
 import javax.swing.*;
 import java.io.IOException;
+import java.rmi.NoSuchObjectException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeoutException;
 
 public class Server {
-    private static final String RABBIT_MQ_HOST = "localhost";
     private static final int GAME_TICK_RATE_MS = 30;
     private static Optional<GlobalView> globalView = Optional.empty();
     private static DistributedGameStateManager distributedManager = null;
 
-    public static void main(String[] args) throws IOException, TimeoutException {
+    public static void main(String[] args) {
         try {
-            ConnectionFactory factory = new ConnectionFactory();
-            factory.setHost(RABBIT_MQ_HOST);
-            Connection connection = factory.newConnection();
-            Channel channel = connection.createChannel();
+            distributedManager = new DistributedGameStateManager();
+            var stub = (GameServerInterface) UnicastRemoteObject.exportObject(distributedManager, 0);
+            var registry = LocateRegistry.getRegistry();
+            registry.rebind("remoteServer", stub);
 
-            distributedManager = new DistributedGameStateManager(connection);
 
             SwingUtilities.invokeLater(() -> {
                 globalView = Optional.of(new GlobalView(distributedManager));
                 globalView.ifPresent(x -> x.setVisible(true));
             });
+
+            System.out.println("Game server started. Press CTRL-C to exit.");
 
             Timer gameLoopTimer = new Timer();
             gameLoopTimer.scheduleAtFixedRate(new TimerTask() {
@@ -39,17 +45,26 @@ public class Server {
                 public void run() {
                     if(!distributedManager.isRunning()){
                         this.cancel();
+                        try {
+                            registry.unbind("remoteServer");
+                        } catch (RemoteException | NotBoundException e) {
+                            throw new RuntimeException(e);
+                        }
+                        try {
+                            UnicastRemoteObject.unexportObject(distributedManager, true);
+                        } catch (NoSuchObjectException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
                     distributedManager.tick();
                     SwingUtilities.invokeLater(() -> globalView.ifPresent(GlobalView::repaintView));
                 }
             }, 0, GAME_TICK_RATE_MS);
 
-            System.out.println("Game server started. Press CTRL-C to exit.");
         } catch (Exception e) {
             e.printStackTrace();
             if (distributedManager != null) {
-                distributedManager.notifyClose();
+                distributedManager.terminate();
                 distributedManager.tick();
             }
             System.err.println(e.getMessage());

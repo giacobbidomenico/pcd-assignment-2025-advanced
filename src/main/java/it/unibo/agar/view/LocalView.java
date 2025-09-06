@@ -10,6 +10,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.rmi.RemoteException;
 import java.util.Optional;
 
 public class LocalView extends JFrame {
@@ -42,7 +43,11 @@ public class LocalView extends JFrame {
             @Override
             public void windowClosing(WindowEvent e) {
                 System.out.println("Closing local view for player " + playerId + ". Performing graceful shutdown...");
-                distributedClient.terminate();
+                try {
+                    distributedClient.terminate();
+                } catch (RemoteException ex) {
+                    System.out.println("Server error: could not reach the server.");
+                }
             }
         });
     }
