@@ -8,9 +8,11 @@ public class DistributedClient {
 
     private boolean running = false;
     private final GameServerInterface remoteServer;
+    private final boolean AI;
 
-    public DistributedClient(GameServerInterface remoteServer) {
+    public DistributedClient(GameServerInterface remoteServer, boolean AI) {
         this.remoteServer = remoteServer;
+        this.AI = AI;
     }
 
     public synchronized void registration() throws RemoteException {
@@ -36,6 +38,9 @@ public class DistributedClient {
         if(this.running){
             World world = this.remoteServer.getWorld();
             this.stateManager.updateState(world);
+            if(this.AI) {
+                AIMovement.moveAI(playerId, this.stateManager);
+            }
             this.stateManager.tick();
             Player currentPlayer = this.stateManager.getWorld().getPlayerById(this.playerId).get();
             Position directions = this.stateManager.getDirection();

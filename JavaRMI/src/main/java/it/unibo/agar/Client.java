@@ -20,6 +20,14 @@ public class Client {
     private static DistributedClient client = null;
 
     public static void main(String[] args) throws IOException, TimeoutException {
+        boolean AI = false;
+        for (String arg : args) {
+            if (arg.equalsIgnoreCase("-AI")) {
+                AI = true;
+                break;
+            }
+        }
+
         try {
             var registry = LocateRegistry.getRegistry();
             GameServerInterface remoteServer = null;
@@ -30,7 +38,7 @@ public class Client {
                 System.exit(0);
             }
 
-            client = new DistributedClient(remoteServer);
+            client = new DistributedClient(remoteServer, AI);
             try {
                 client.registration();
             } catch (RuntimeException e) {
