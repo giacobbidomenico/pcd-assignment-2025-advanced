@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="61641fa0-e647-4d59-b389-6af3305282df" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/codeStyles/Project.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/uiDesigner.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradlew" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradlew.bat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/settings.gradle.kts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/Client.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/Server.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/AIMovement.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/AbstractEntity.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/ClientGameStateManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/DefaultGameStateManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/DistributedClient.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/DistributedGameStateManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/EatingManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/Entity.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/Food.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/GameInitializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/GameServerInterface.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/GameStateManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/Messages.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/Player.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/Position.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/Serializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/ServerEvents.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/ServerGameStateManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/model/World.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/view/AgarViewUtils.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/view/GameOverPanel.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/view/GamePanel.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/view/GlobalView.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/it/unibo/agar/view/LocalView.java" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "customColor": "",
+  "associatedIndex": 8
+}]]></component>
+  <component name="ProjectId" id="32NPI5HJTaiFaGXyHjxDrGrlGBd" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.go.formatter.settings.were.checked": "true",
+    "RunOnceActivity.go.migrated.go.modules.settings": "true",
+    "go.import.settings.migrated": "true",
+    "kotlin-language-version-configured": "true",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.23892.409" />
+        <option value="bundled-js-predefined-d6986cc7102b-e03c56caf84a-JavaScript-IU-252.23892.409" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="61641fa0-e647-4d59-b389-6af3305282df" name="Changes" comment="" />
+      <created>1757257976965</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1757257976965</updated>
+      <workItem from="1757257978848" duration="23000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VgoProject">
+    <settings-migrated>true</settings-migrated>
+  </component>
+</project>
