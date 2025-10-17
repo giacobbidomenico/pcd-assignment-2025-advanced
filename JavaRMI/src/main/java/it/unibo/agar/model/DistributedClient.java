@@ -33,10 +33,11 @@ public class DistributedClient {
     }
 
     public synchronized void tick() throws RemoteException {
-        if (!this.remoteServer.checkGameOver(this.playerId)) {
-            this.running = false;
-        }
         if(this.running){
+            if (!this.remoteServer.checkGameOver(this.playerId)) {
+                this.running = false;
+            }
+        
             World world = this.remoteServer.getWorld();
             this.stateManager.updateState(world);
             if(this.AI) {
