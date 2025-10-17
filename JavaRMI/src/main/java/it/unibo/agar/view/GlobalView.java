@@ -37,6 +37,17 @@ public class GlobalView extends JFrame {
         });
     }
 
+    public void showGameOver() {
+        this.gamePanel.setVisible(false);
+        this.remove(this.gamePanel);
+
+        GameOverPanel gameOverPanel = new GameOverPanel();
+        this.add(gameOverPanel, BorderLayout.CENTER);
+
+        this.revalidate();
+        this.repaint();
+    }
+
     public void repaintView() {
         if (gamePanel != null) {
             gamePanel.repaint();

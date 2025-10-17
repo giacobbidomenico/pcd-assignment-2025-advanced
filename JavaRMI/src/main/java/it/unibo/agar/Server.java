@@ -45,6 +45,7 @@ public class Server {
                 public void run() {
                     if(!distributedManager.isRunning()){
                         this.cancel();
+                        SwingUtilities.invokeLater(() -> globalView.ifPresent(GlobalView::showGameOver));
                         try {
                             registry.unbind("remoteServer");
                         } catch (RemoteException | NotBoundException e) {
@@ -55,9 +56,10 @@ public class Server {
                         } catch (NoSuchObjectException e) {
                             throw new RuntimeException(e);
                         }
+                    } else {
+                        distributedManager.tick();
+                        SwingUtilities.invokeLater(() -> globalView.ifPresent(GlobalView::repaintView));
                     }
-                    distributedManager.tick();
-                    SwingUtilities.invokeLater(() -> globalView.ifPresent(GlobalView::repaintView));
                 }
             }, 0, GAME_TICK_RATE_MS);
 

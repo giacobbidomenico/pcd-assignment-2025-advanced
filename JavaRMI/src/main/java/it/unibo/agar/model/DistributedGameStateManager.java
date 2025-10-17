@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DistributedGameStateManager implements GameServerInterface {
 
+    private static final int MAX_GROWTH = 10000;
     private static final int WORLD_WIDTH = 1000;
     private static final int WORLD_HEIGHT = 1000;
     private static final int INITIAL_FOOD_COUNT = 150;
@@ -67,6 +68,14 @@ public class DistributedGameStateManager implements GameServerInterface {
         });
     }
 
+    private boolean gameEnded(){
+        return this.localGameStateManager.getWorld().getPlayers().stream().anyMatch( x -> x.getMass() >= MAX_GROWTH);
+    }
+
+    private List<Player> getPlayers(){
+        return this.localGameStateManager.getWorld().getPlayers();
+    }
+
     public synchronized void terminate(){
         clients.clear();
         this.running = false;
@@ -75,7 +84,12 @@ public class DistributedGameStateManager implements GameServerInterface {
     public synchronized void tick() {
         if (this.running) {
             this.localGameStateManager.tick();
-            this.notifyGameOver(this.localGameStateManager.getPlayersToRemove());
+            if (this.gameEnded()) {
+                this.notifyGameOver(this.getPlayers());
+                this.terminate();
+            } else {
+                this.notifyGameOver(this.localGameStateManager.getPlayersToRemove());
+            }
         }
     }
 

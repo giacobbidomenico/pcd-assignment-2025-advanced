@@ -17,6 +17,7 @@ public class DistributedClient {
         Messages.RegistrationACK result = remoteServer.registerPlayer();
         this.playerId = result.playerId();
         stateManager = new ClientGameStateManager(result.world(), this.playerId);
+        AIMovement.moveAI(this.playerId, stateManager);
         this.running = true;
     }
 
