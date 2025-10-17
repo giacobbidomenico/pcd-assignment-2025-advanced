@@ -36,6 +36,7 @@ public class DistributedClient {
         if(this.running){
             if (!this.remoteServer.checkGameOver(this.playerId)) {
                 this.running = false;
+                return;
             }
         
             World world = this.remoteServer.getWorld();
